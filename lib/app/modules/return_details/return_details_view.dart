@@ -29,7 +29,7 @@ class ReturnDetailsView extends GetView<ReturnDetailsController> {
 
           return Column(
             children: [
-              // معلومات الفاتورة
+              // معلومات الفاتورة والعميل
               Container(
                 padding: const EdgeInsets.all(16),
                 color: Colors.white,
@@ -42,19 +42,21 @@ class ReturnDetailsView extends GetView<ReturnDetailsController> {
                           fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'المندوب: ${controller.invoiceData['delegateName']}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'التاريخ: ${controller.formatDate(controller.invoiceData['createdAt'])}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    if (!controller.isLoadingCustomerData.value)
+                      Text(
+                        'المديونية السابقة: ${controller.customerDelayedBalance.value} جنيه',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: controller.customerDelayedBalance.value > 0
+                              ? Colors.red
+                              : Colors.green,
+                        ),
+                      ),
                   ],
                 ),
               ),
               const Divider(height: 1),
+
               // قائمة المنتجات
               Expanded(
                 child: ListView.builder(
@@ -62,67 +64,67 @@ class ReturnDetailsView extends GetView<ReturnDetailsController> {
                   itemCount: controller.products.length,
                   itemBuilder: (context, index) {
                     final product = controller.products[index];
+                    final hasDiscount =
+                        product['discount'] != null && product['discount'] > 0;
+
                     return Card(
                       elevation: 4,
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
                                     product['productName'].toString(),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                      'الكمية: ${product['originalQuantity']}'),
+                                  Text('السعر: ${product['price']} جنيه'),
+                                  if (hasDiscount)
+                                    Text(
+                                      'خصم: ${product['discount']}%',
+                                      style:
+                                          const TextStyle(color: Colors.green),
+                                    ),
+                                  Text(
+                                    'المرتجع: ${product['returnedQuantity']}',
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle),
+                                  onPressed: () => controller
+                                      .decreaseReturnedQuantity(index),
+                                  color: Colors.green,
+                                ),
+                                Text(
+                                  '${product['returnedQuantity']}',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed: () =>
-                                      controller.showReturnDialog(index),
+                                  icon: const Icon(Icons.add_circle),
+                                  onPressed: product['returnedQuantity'] <
+                                          product['originalQuantity']
+                                      ? () => controller
+                                          .increaseReturnedQuantity(index)
+                                      : null,
                                   color: Colors.red,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        'الكمية الأصلية: ${product['originalQuantity']}'),
-                                    Text(
-                                        'الكمية المرتجعة: ${product['returnedQuantity']}'),
-                                    Text('السعر: ${product['price']} جنيه'),
-                                    if (product['discount'] != null &&
-                                        product['discount'] != 0)
-                                      Text('الخصم: ${product['discount']}%'),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                          Icons.remove_circle_outline),
-                                      onPressed: product['originalQuantity'] >
-                                              product['returnedQuantity']
-                                          ? () => controller
-                                              .increaseReturnedQuantity(index)
-                                          : null,
-                                      color: Colors.red,
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
@@ -133,21 +135,35 @@ class ReturnDetailsView extends GetView<ReturnDetailsController> {
                   },
                 ),
               ),
-              // زر تأكيد المرتجع
+
+              // إجمالي المرتجع وزر التأكيد
               if (controller.hasReturns)
                 Container(
                   padding: const EdgeInsets.all(16),
                   color: Colors.white,
-                  child: ElevatedButton(
-                    onPressed: () => controller.confirmReturns(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: const Text(
-                      'تأكيد المرتجع',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'إجمالي المبلغ المسترد: ${controller.totalReturnAmount.value} جنيه',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => controller.confirmReturns(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: const Text(
+                          'تأكيد المرتجع',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],

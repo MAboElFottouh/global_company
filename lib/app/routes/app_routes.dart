@@ -1,5 +1,3 @@
-part of 'app_pages.dart';
-
 abstract class Routes {
   Routes._();
 
@@ -39,6 +37,8 @@ abstract class Routes {
   static const INVOICE_PAYMENT = '/invoice-payment';
   static const SALES = '/sales';
   static const INVOICE_DETAILS = '/invoice-details';
+  static const CUSTOMER_RETURNS = '/customer-returns';
+  static const RETURN_DETAILS = '/return-details';
 }
 
 abstract class _Paths {

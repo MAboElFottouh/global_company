@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter/material.dart';
 
 class CustomerReturnsController extends GetxController {
   final customerId = Get.arguments['customerId'];
@@ -21,7 +22,6 @@ class CustomerReturnsController extends GetxController {
     try {
       isLoading.value = true;
 
-      // حساب تاريخ قبل أسبوع
       final oneWeekAgo = DateTime.now().subtract(const Duration(days: 7));
 
       final invoicesRef = FirebaseFirestore.instance.collection('invoices');
@@ -31,15 +31,23 @@ class CustomerReturnsController extends GetxController {
               isGreaterThanOrEqualTo: Timestamp.fromDate(oneWeekAgo))
           .get();
 
-      // نقوم بالترتيب بعد جلب البيانات
       final sortedDocs = snapshot.docs;
       sortedDocs.sort((a, b) {
         final aTime =
             (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp;
         final bTime =
             (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp;
-        return bTime.compareTo(aTime); // ترتيب تنازلي (الأحدث أولاً)
+        return bTime.compareTo(aTime);
       });
+
+      // تحميل أسماء المندوبين مسبقاً
+      for (var doc in sortedDocs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['delegateId'] != null) {
+          final delegateName = await getDelegateName(data['delegateId']);
+          data['delegateName'] = delegateName;
+        }
+      }
 
       recentInvoices.value = sortedDocs;
 
@@ -53,7 +61,12 @@ class CustomerReturnsController extends GetxController {
     } catch (e, stackTrace) {
       print('Error loading invoices: $e');
       print('Stack trace: $stackTrace');
-      Get.snackbar('خطأ', 'حدث خطأ أثناء تحميل الفواتير');
+      Get.snackbar(
+        'خطأ',
+        'حدث خطأ أثناء تحميل الفواتير',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -64,9 +77,57 @@ class CustomerReturnsController extends GetxController {
     return DateFormat('yyyy/MM/dd - HH:mm').format(date);
   }
 
-  void showInvoiceDetails(QueryDocumentSnapshot invoice) {
-    // سيتم تنفيذ هذه الوظيفة لاحقاً
-    Get.snackbar('قريباً', 'سيتم إضافة تفاصيل الفاتورة قريباً');
+  void showInvoiceDetails(Map<String, dynamic> invoiceData) {
+    try {
+      if (invoiceData == null) {
+        Get.snackbar(
+          'خطأ',
+          'لا توجد بيانات للفاتورة',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      print('Invoice Data: $invoiceData');
+      print('Products: ${invoiceData['products']}');
+
+      if (invoiceData['products'] == null ||
+          (invoiceData['products'] as List).isEmpty) {
+        Get.snackbar(
+          'خطأ',
+          'لا توجد منتجات في هذه الفاتورة',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      final Map<String, dynamic> formattedInvoice = {
+        'products': invoiceData['products'],
+        'createdAt': invoiceData['createdAt'],
+        'delegateId': invoiceData['delegateId'] ?? '',
+        'delegateName': invoiceData['delegateName'] ?? 'غير معروف',
+        'totalDue': invoiceData['totalDue'] ?? 0.0,
+        'customerName': customerName,
+        'customerId': customerId,
+      };
+
+      Get.toNamed(
+        '/return-details',
+        arguments: {'invoice': formattedInvoice},
+        preventDuplicates: true,
+      );
+    } catch (e, stackTrace) {
+      print('Error in showInvoiceDetails: $e');
+      print('Stack trace: $stackTrace');
+      Get.snackbar(
+        'خطأ',
+        'حدث خطأ أثناء فتح تفاصيل الفاتورة',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Future<String> getDelegateName(String delegateId) async {

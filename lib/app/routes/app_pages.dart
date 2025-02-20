@@ -71,6 +71,9 @@ import '../modules/invoice_details/invoice_details_binding.dart';
 import '../modules/invoice_details/invoice_details_view.dart';
 import '../modules/customer_returns/customer_returns_binding.dart';
 import '../modules/customer_returns/customer_returns_view.dart';
+import '../modules/return_details/return_details_binding.dart';
+import '../modules/return_details/return_details_view.dart';
+import 'app_routes.dart';
 
 abstract class Routes {
   Routes._();
@@ -110,6 +113,8 @@ abstract class Routes {
   static const INVOICE_PAYMENT = '/invoice-payment';
   static const SALES = '/sales';
   static const INVOICE_DETAILS = '/invoice-details';
+  static const CUSTOMER_RETURNS = '/customer-returns';
+  static const RETURN_DETAILS = '/return-details';
 }
 
 class AppPages {
@@ -302,9 +307,14 @@ class AppPages {
       binding: InvoiceDetailsBinding(),
     ),
     GetPage(
-      name: '/customer-returns',
+      name: Routes.CUSTOMER_RETURNS,
       page: () => const CustomerReturnsView(),
       binding: CustomerReturnsBinding(),
+    ),
+    GetPage(
+      name: Routes.RETURN_DETAILS,
+      page: () => const ReturnDetailsView(),
+      binding: ReturnDetailsBinding(),
     ),
   ];
 }

@@ -41,6 +41,8 @@ class CustomerReturnsView extends GetView<CustomerReturnsController> {
             itemCount: controller.recentInvoices.length,
             itemBuilder: (context, index) {
               final invoice = controller.recentInvoices[index];
+              final invoiceData = invoice.data() as Map<String, dynamic>;
+
               return Card(
                 elevation: 4,
                 margin: const EdgeInsets.only(bottom: 12),
@@ -49,7 +51,7 @@ class CustomerReturnsView extends GetView<CustomerReturnsController> {
                 ),
                 child: ListTile(
                   title: Text(
-                    'التاريخ: ${controller.formatDate(invoice['createdAt'])}',
+                    'التاريخ: ${controller.formatDate(invoiceData['createdAt'])}',
                     style: const TextStyle(fontSize: 15),
                   ),
                   subtitle: Column(
@@ -57,13 +59,13 @@ class CustomerReturnsView extends GetView<CustomerReturnsController> {
                     children: [
                       const SizedBox(height: 4),
                       Text(
-                        'عدد الأصناف: ${(invoice['products'] as List).length}',
+                        'عدد الأصناف: ${(invoiceData['products'] as List).length}',
                         style: const TextStyle(color: Colors.blue),
                       ),
                       const SizedBox(height: 4),
                       FutureBuilder<String>(
-                        future:
-                            controller.getDelegateName(invoice['delegateId']),
+                        future: controller
+                            .getDelegateName(invoiceData['delegateId']),
                         builder: (context, snapshot) {
                           return Text(
                             'المندوب: ${snapshot.data ?? 'جاري التحميل...'}',
@@ -74,14 +76,14 @@ class CustomerReturnsView extends GetView<CustomerReturnsController> {
                     ],
                   ),
                   trailing: Text(
-                    '${invoice['totalDue']} جنيه',
+                    '${invoiceData['totalDue']} جنيه',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                       fontSize: 16,
                     ),
                   ),
-                  onTap: () => controller.showInvoiceDetails(invoice),
+                  onTap: () => controller.showInvoiceDetails(invoiceData),
                   isThreeLine: true,
                 ),
               );
